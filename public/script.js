@@ -65,9 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- UI Update Funktionen ---
   function updateWeekDisplay() {
-    weekDisplay.textContent = `Diese Woche (${formatDateForDisplay(
-      currentTuesdayDate
-    )})`;
+    weekDisplay.textContent = `${formatDateForDisplay(currentTuesdayDate)}`;
     // Optional: Buttons deaktivieren, wenn man zu weit in die Zukunft/Vergangenheit geht
     // (Hier nicht implementiert, aber möglich)
   }

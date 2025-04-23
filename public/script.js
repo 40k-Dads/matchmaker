@@ -1,23 +1,43 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Globale Referenzen
   const prevWeekBtn = document.getElementById("prev-week");
   const nextWeekBtn = document.getElementById("next-week");
   const weekDisplay = document.getElementById("week-display");
   const requestsList = document.getElementById("requests-list");
   const confirmedList = document.getElementById("confirmed-list");
-  const addRequestBtn = document.getElementById("add-request-btn");
 
-  // Basis-URL für die API (wird bei lokaler Entwicklung angepasst)
-  // Bei Deployment über Wrangler wird dies automatisch die URL deines Workers
+  // Referenzen für das Inline-Formular zum Hinzufügen
+  const addRequestBtn = document.getElementById("add-request-btn");
+  const addRequestForm = document.getElementById("add-request-form");
+  const newRequestNameInput = document.getElementById("new-request-name");
+  const submitRequestBtn = document.getElementById("submit-request-btn");
+  const cancelRequestBtn = document.getElementById("cancel-request-btn");
+  const addRequestError = document.getElementById("add-request-error");
+
+  // Referenzen für das "Annehmen"-Modal
+  const acceptModal = document.getElementById("accept-modal");
+  const modalQuestion = document.getElementById("modal-question");
+  const acceptingPlayerNameInput = document.getElementById(
+    "accepting-player-name"
+  );
+  const modalConfirmBtn = document.getElementById("modal-confirm-btn");
+  const modalCancelBtn = acceptModal.querySelector(".cancel-btn"); // Sicherer Selektor
+  const modalCloseBtn = acceptModal.querySelector(".close-btn");
+
+  // API Basis-URL (funktioniert für Pages Functions)
   const API_BASE_URL = window.location.origin;
 
+  // Globaler State
   let currentTuesdayDate = getNextTuesday(new Date()); // Startet mit dem nächsten Dienstag
+  let currentRequestId = null; // Speichert die ID für das "Annehmen"-Modal
 
   // --- Datumsfunktionen ---
   function getNextTuesday(fromDate) {
     const date = new Date(fromDate);
+    date.setHours(12, 0, 0, 0); // Mittagszeit verwenden, um Zeitzonenprobleme zu minimieren
     const day = date.getDay(); // 0 = Sonntag, 1 = Montag, 2 = Dienstag, ...
-    const diff = (2 - day + 7) % 7; // Tage bis zum nächsten Dienstag (0 wenn heute Dienstag ist)
-    date.setDate(date.getDate() + (diff === 0 ? 0 : diff)); // Gehe zum nächsten Dienstag
+    const diff = (2 - day + 7) % 7; // Tage bis zum nächsten Dienstag
+    date.setDate(date.getDate() + diff);
     return date;
   }
 
@@ -48,17 +68,19 @@ document.addEventListener("DOMContentLoaded", () => {
     weekDisplay.textContent = `Diese Woche (${formatDateForDisplay(
       currentTuesdayDate
     )})`;
+    // Optional: Buttons deaktivieren, wenn man zu weit in die Zukunft/Vergangenheit geht
+    // (Hier nicht implementiert, aber möglich)
   }
 
   function renderList(listElement, items, type) {
     listElement.innerHTML = ""; // Liste leeren
-    if (items.length === 0) {
+    if (!items || items.length === 0) {
       const li = document.createElement("li");
       li.textContent =
         type === "requests"
-          ? "Keine Spielgesuche für diese Woche."
+          ? "Keine offenen Spielgesuche für diese Woche."
           : "Keine bestätigten Spiele für diese Woche.";
-      li.classList.add("loading-placeholder"); // Gleiches Styling wie Ladeplatzhalter
+      li.classList.add("loading-placeholder");
       listElement.appendChild(li);
       return;
     }
@@ -75,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const acceptBtn = document.createElement("button");
         acceptBtn.textContent = "Annehmen";
         acceptBtn.classList.add("accept-btn");
-        acceptBtn.onclick = () => acceptRequest(item.id, item.player_name);
+        acceptBtn.onclick = () => openAcceptModal(item.id, item.player_name);
 
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Löschen";
@@ -87,12 +109,10 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         // confirmed
         textSpan.textContent = `${item.player1_name} vs ${item.player2_name}`;
-
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Löschen";
         deleteBtn.classList.add("delete-btn");
         deleteBtn.onclick = () => deleteConfirmedGame(item.id);
-
         actionsDiv.appendChild(deleteBtn);
       }
       li.appendChild(textSpan);
@@ -102,12 +122,54 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function setLoadingState(loading = true) {
-    requestsList.innerHTML = loading
-      ? '<li class="loading-placeholder">Lade Gesuche...</li>'
-      : "";
-    confirmedList.innerHTML = loading
-      ? '<li class="loading-placeholder">Lade bestätigte Spiele...</li>'
-      : "";
+    const placeholderRequest =
+      '<li class="loading-placeholder">Lade Gesuche...</li>';
+    const placeholderConfirmed =
+      '<li class="loading-placeholder">Lade bestätigte Spiele...</li>';
+    if (loading) {
+      // Nur Platzhalter setzen, wenn Liste noch nicht initialisiert wurde oder leer ist
+      if (
+        requestsList.children.length === 0 ||
+        requestsList.querySelector(".loading-placeholder")
+      ) {
+        requestsList.innerHTML = placeholderRequest;
+      }
+      if (
+        confirmedList.children.length === 0 ||
+        confirmedList.querySelector(".loading-placeholder")
+      ) {
+        confirmedList.innerHTML = placeholderConfirmed;
+      }
+    } else {
+      // Entferne Platzhalter nur, wenn danach auch etwas gerendert wird (im fetchGames)
+      // Das Leeren der Liste in renderList reicht meistens aus.
+    }
+  }
+
+  function showLoadingError(listElement, type) {
+    const li = document.createElement("li");
+    li.textContent = `Fehler beim Laden der ${
+      type === "requests" ? "Gesuche" : "Spiele"
+    }.`;
+    li.classList.add("loading-placeholder", "error");
+    listElement.innerHTML = ""; // Vorherige Inhalte (auch Ladeanzeige) entfernen
+    listElement.appendChild(li);
+  }
+
+  // --- Modal Funktionen ---
+  function openAcceptModal(requestId, requestPlayerName) {
+    currentRequestId = requestId; // ID speichern für den API-Aufruf
+    modalQuestion.textContent = `Möchtest du das Spielgesuch von ${requestPlayerName} annehmen?`;
+    acceptingPlayerNameInput.value = ""; // Input leeren
+    acceptModal.classList.add("show"); // Modal anzeigen (CSS-Klasse hinzufügen)
+    acceptingPlayerNameInput.focus(); // Fokus auf das Eingabefeld setzen
+  }
+
+  function closeModal() {
+    if (acceptModal) {
+      acceptModal.classList.remove("show"); // Modal verstecken (CSS-Klasse entfernen)
+    }
+    currentRequestId = null; // Gespeicherte ID zurücksetzen
   }
 
   // --- API Call Funktionen ---
@@ -115,49 +177,66 @@ document.addEventListener("DOMContentLoaded", () => {
     setLoadingState(true);
     const dateStr = formatDate(currentTuesdayDate);
     try {
+      // Nur die Daten für das ausgewählte Datum abrufen
       const response = await fetch(`${API_BASE_URL}/api/games?date=${dateStr}`);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Versuchen, Fehlermeldung aus dem Body zu lesen
+        let errorMsg = `HTTP error! Status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+          /* Ignorieren, wenn Body kein JSON ist */
+        }
+        throw new Error(errorMsg);
       }
       const data = await response.json();
+      // Daten rendern (setLoadingState(false) ist implizit durch renderList)
       renderList(requestsList, data.requests || [], "requests");
       renderList(confirmedList, data.confirmed || [], "confirmed");
     } catch (error) {
       console.error("Fehler beim Abrufen der Spiele:", error);
-      requestsList.innerHTML =
-        '<li class="loading-placeholder error">Fehler beim Laden der Gesuche.</li>';
-      confirmedList.innerHTML =
-        '<li class="loading-placeholder error">Fehler beim Laden der Spiele.</li>';
-    } finally {
-      // Optional: setLoadingState(false) wenn man die Platzhalter nicht behalten will
+      showLoadingError(requestsList, "requests");
+      showLoadingError(confirmedList, "confirmed");
     }
   }
 
-  async function addRequest() {
-    const playerName = prompt("Bitte gib deinen Namen ein:");
-    if (!playerName || playerName.trim() === "") {
-      alert("Name darf nicht leer sein.");
+  async function submitNewRequest() {
+    const playerName = newRequestNameInput.value.trim();
+    if (!playerName) {
+      showAddRequestError("Name darf nicht leer sein.");
+      newRequestNameInput.focus();
       return;
     }
+    hideAddRequestError(); // Fehler ausblenden, falls vorher einer da war
 
     const dateStr = formatDate(currentTuesdayDate);
+    submitRequestBtn.disabled = true; // Button deaktivieren während Senden
+    submitRequestBtn.textContent = "Sende...";
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: playerName.trim(), date: dateStr }),
+        body: JSON.stringify({ name: playerName, date: dateStr }),
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.error || `HTTP error! status: ${response.status}`
-        );
+        const errorMessage =
+          errorData?.error || `HTTP error! Status: ${response.status}`;
+        throw new Error(errorMessage);
       }
-      await response.json(); // Antwort verarbeiten (optional)
-      fetchGames(); // Liste neu laden
+      await response.json(); // Antwort verarbeiten (hier nicht genutzt)
+
+      // Erfolgreich: Formular zurücksetzen und Liste neu laden
+      hideAddRequestForm();
+      fetchGames(); // Liste neu laden, um das neue Gesuch anzuzeigen
     } catch (error) {
       console.error("Fehler beim Hinzufügen des Gesuchs:", error);
-      alert(`Fehler beim Hinzufügen: ${error.message}`);
+      showAddRequestError(`Fehler: ${error.message}`);
+      // Button wieder aktivieren, damit Nutzer es erneut versuchen kann
+      submitRequestBtn.disabled = false;
+      submitRequestBtn.textContent = "Gesuch erstellen";
     }
   }
 
@@ -182,29 +261,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function acceptRequest(requestId, requestPlayerName) {
-    const acceptingPlayerName = prompt(
-      `Du nimmst das Spiel von ${requestPlayerName} an.\nBitte gib DEINEN Namen ein:`
-    );
-    if (!acceptingPlayerName || acceptingPlayerName.trim() === "") {
-      alert("Name darf nicht leer sein.");
+  async function confirmAcceptRequest() {
+    // Wird vom Modal-Button aufgerufen
+    const acceptingPlayerName = acceptingPlayerNameInput.value.trim();
+    if (!acceptingPlayerName) {
+      alert("Bitte gib deinen Namen ein.");
+      acceptingPlayerNameInput.focus();
       return;
     }
-    if (
-      acceptingPlayerName.trim().toLowerCase() ===
-      requestPlayerName.toLowerCase()
-    ) {
-      alert("Du kannst dein eigenes Spielgesuch nicht annehmen.");
+    if (!currentRequestId) {
+      console.error("Fehler: Keine Request ID im Modal gespeichert.");
+      closeModal();
       return;
     }
+
+    // Optional: Frontend-Check, ob man sich selbst annimmt (Backend macht das auch)
+    // const requestPlayerElement = requestsList.querySelector(...) // Müsste man finden
+    // if (requestPlayerElement && acceptingPlayerName.toLowerCase() === requestPlayerElement.textContent.split(' ')[0].toLowerCase()) {
+    //      alert("Du kannst dein eigenes Gesuch nicht annehmen.");
+    //      return;
+    // }
+
+    modalConfirmBtn.disabled = true; // Button deaktivieren
+    modalConfirmBtn.textContent = "Sende...";
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          requestId: requestId,
-          acceptingPlayerName: acceptingPlayerName.trim(),
+          requestId: currentRequestId,
+          acceptingPlayerName: acceptingPlayerName,
         }),
       });
       if (!response.ok) {
@@ -214,10 +301,16 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
       await response.json();
+      closeModal(); // Modal schließen bei Erfolg
       fetchGames(); // Liste neu laden
     } catch (error) {
       console.error("Fehler beim Annehmen des Gesuchs:", error);
       alert(`Fehler beim Annehmen: ${error.message}`);
+      // Button im Modal bleibt deaktiviert, Nutzer muss ggf. abbrechen
+    } finally {
+      // Button wieder aktivieren, falls der Nutzer es erneut versuchen will (oder abbrechen)
+      modalConfirmBtn.disabled = false;
+      modalConfirmBtn.textContent = "Annehmen";
     }
   }
 
@@ -243,226 +336,97 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // --- UI Hilfsfunktionen für das Inline Formular ---
+  function showAddRequestForm() {
+    addRequestBtn.hidden = true; // Button "Ich suche..." verstecken
+    addRequestForm.hidden = false; // Formular anzeigen
+    newRequestNameInput.value = ""; // Input leeren
+    hideAddRequestError(); // Alte Fehler löschen
+    newRequestNameInput.focus(); // Fokus auf Input
+    submitRequestBtn.disabled = false; // Button aktivieren (falls vorher deaktiviert)
+    submitRequestBtn.textContent = "Gesuch erstellen"; // Button Text zurücksetzen
+  }
+
+  function hideAddRequestForm() {
+    addRequestForm.hidden = true; // Formular verstecken
+    addRequestBtn.hidden = false; // Button "Ich suche..." anzeigen
+    newRequestNameInput.value = ""; // Input leeren
+    hideAddRequestError(); // Fehler löschen
+  }
+
+  function showAddRequestError(message) {
+    addRequestError.textContent = message;
+    addRequestError.hidden = false;
+  }
+
+  function hideAddRequestError() {
+    addRequestError.textContent = "";
+    addRequestError.hidden = true;
+  }
+
   // --- Event Listeners ---
+  // Wochennavigation
   prevWeekBtn.addEventListener("click", () => {
     currentTuesdayDate = addDays(currentTuesdayDate, -7);
     updateWeekDisplay();
     fetchGames();
+    hideAddRequestForm(); // Formular verstecken beim Wochenwechsel
   });
 
   nextWeekBtn.addEventListener("click", () => {
-    // Optional: Begrenzung auf nächste Woche, falls gewünscht
-    const nextTuesday = getNextTuesday(new Date());
-    const oneWeekFromNextTuesday = addDays(nextTuesday, 7);
-    if (currentTuesdayDate < oneWeekFromNextTuesday) {
-      // Erlaube aktuelle und nächste Woche
+    // Optional: Begrenzung auf nächste Woche (Hier implementiert)
+    const today = new Date();
+    const thisWeeksTuesday = getNextTuesday(today);
+    const nextWeeksTuesday = addDays(thisWeeksTuesday, 7);
+
+    // Erlaube nur diese Woche und die nächste Woche
+    if (
+      formatDate(addDays(currentTuesdayDate, 7)) <= formatDate(nextWeeksTuesday)
+    ) {
       currentTuesdayDate = addDays(currentTuesdayDate, 7);
       updateWeekDisplay();
       fetchGames();
+      hideAddRequestForm(); // Formular verstecken beim Wochenwechsel
     } else {
       alert(
         "Du kannst nur Spiele für die aktuelle und nächste Woche anzeigen/eintragen."
       );
+      // Begrenzung kann entfernt werden, wenn weiter in die Zukunft geblättert werden soll
     }
-    // Einfachere Variante ohne Begrenzung:
-    // currentTuesdayDate = addDays(currentTuesdayDate, 7);
-    // updateWeekDisplay();
-    // fetchGames();
   });
 
-  addRequestBtn.addEventListener("click", addRequest);
+  // Inline-Formular Steuerung
+  addRequestBtn.addEventListener("click", showAddRequestForm); // Zeigt das Formular an
+  cancelRequestBtn.addEventListener("click", hideAddRequestForm); // Versteckt das Formular
+  submitRequestBtn.addEventListener("click", submitNewRequest); // Sendet das Formular
+
+  // Optional: Formular auch bei Enter im Input-Feld absenden
+  newRequestNameInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Verhindert Standard-Formular-Verhalten
+      submitNewRequest();
+    }
+  });
+
+  // Modal Steuerung
+  modalConfirmBtn.addEventListener("click", confirmAcceptRequest); // Bestätigt die Annahme
+  if (modalCancelBtn) {
+    // Sicherstellen, dass der Button existiert
+    modalCancelBtn.addEventListener("click", closeModal); // Schließt Modal bei Klick auf Abbrechen
+  }
+  if (modalCloseBtn) {
+    // Sicherstellen, dass der Button existiert
+    modalCloseBtn.addEventListener("click", closeModal); // Schließt Modal bei Klick auf X
+  }
+  // Schließen, wenn außerhalb des Modals geklickt wird
+  window.addEventListener("click", function (event) {
+    if (event.target == acceptModal) {
+      // Prüfen ob Klick auf den Hintergrund (das Modal selbst)
+      closeModal();
+    }
+  });
 
   // --- Initial Load ---
-  updateWeekDisplay();
-  fetchGames();
-});
-document.addEventListener("DOMContentLoaded", () => {
-  // ... (andere Variablen wie gehabt: prevWeekBtn, nextWeekBtn, etc.) ...
-  const requestsList = document.getElementById("requests-list");
-  const confirmedList = document.getElementById("confirmed-list");
-  const addRequestBtn = document.getElementById("add-request-btn");
-
-  // Modal Elemente holen
-  const acceptModal = document.getElementById("accept-modal");
-  const modalQuestion = document.getElementById("modal-question");
-  const acceptingPlayerNameInput = document.getElementById(
-    "accepting-player-name"
-  );
-  const modalConfirmBtn = document.getElementById("modal-confirm-btn");
-  const modalCloseBtn = document.querySelector(".close-btn"); // Kann auch über ID gehen
-
-  const API_BASE_URL = window.location.origin;
-  let currentTuesdayDate = getNextTuesday(new Date());
-  let currentRequestId = null; // Variable zum Speichern der ID für das Modal
-
-  // --- Datumsfunktionen (unverändert) ---
-  function getNextTuesday(fromDate) {
-    /* ... */
-  }
-  function addDays(date, days) {
-    /* ... */
-  }
-  function formatDate(date) {
-    /* ... */
-  }
-  function formatDateForDisplay(date) {
-    /* ... */
-  }
-
-  // --- UI Update Funktionen ---
-  function updateWeekDisplay() {
-    /* ... (unverändert) ... */
-  }
-
-  function renderList(listElement, items, type) {
-    listElement.innerHTML = ""; // Liste leeren
-    if (items.length === 0) {
-      // ... (Keine Elemente Nachricht, unverändert) ...
-      return;
-    }
-
-    items.forEach((item) => {
-      const li = document.createElement("li");
-      const textSpan = document.createElement("span");
-      const actionsDiv = document.createElement("div");
-      actionsDiv.classList.add("actions");
-
-      if (type === "requests") {
-        textSpan.textContent = `${item.player_name} sucht ein Spiel`;
-
-        const acceptBtn = document.createElement("button");
-        acceptBtn.textContent = "Annehmen";
-        acceptBtn.classList.add("accept-btn");
-        // HIER die Änderung: Ruft jetzt openAcceptModal auf
-        acceptBtn.onclick = () => openAcceptModal(item.id, item.player_name);
-
-        const deleteBtn = document.createElement("button");
-        deleteBtn.textContent = "Löschen";
-        deleteBtn.classList.add("delete-btn");
-        deleteBtn.onclick = () => deleteRequest(item.id);
-
-        actionsDiv.appendChild(acceptBtn);
-        actionsDiv.appendChild(deleteBtn);
-      } else {
-        // confirmed
-        // ... (Bestätigte Spiele rendern, unverändert) ...
-        textSpan.textContent = `${item.player1_name} vs ${item.player2_name}`;
-        const deleteBtn = document.createElement("button");
-        deleteBtn.textContent = "Löschen";
-        deleteBtn.classList.add("delete-btn");
-        deleteBtn.onclick = () => deleteConfirmedGame(item.id);
-        actionsDiv.appendChild(deleteBtn);
-      }
-      li.appendChild(textSpan);
-      li.appendChild(actionsDiv);
-      listElement.appendChild(li);
-    });
-  }
-
-  function setLoadingState(loading = true) {
-    /* ... (unverändert) ... */
-  }
-
-  // --- Modal Funktionen ---
-  function openAcceptModal(requestId, requestPlayerName) {
-    currentRequestId = requestId; // ID speichern für den API-Aufruf
-    modalQuestion.textContent = `Möchtest du das Spielgesuch von ${requestPlayerName} annehmen?`;
-    acceptingPlayerNameInput.value = ""; // Input leeren
-    acceptModal.classList.add("show"); // Modal anzeigen
-    acceptingPlayerNameInput.focus(); // Fokus auf das Eingabefeld setzen
-  }
-
-  function closeModal() {
-    acceptModal.classList.remove("show"); // Modal verstecken
-    currentRequestId = null; // Gespeicherte ID zurücksetzen
-  }
-
-  // Event Listener für Modal Buttons (außerhalb von openAcceptModal hinzufügen)
-  modalConfirmBtn.onclick = () => {
-    const acceptingPlayerName = acceptingPlayerNameInput.value.trim();
-    if (!acceptingPlayerName) {
-      alert("Bitte gib deinen Namen ein.");
-      acceptingPlayerNameInput.focus();
-      return;
-    }
-    if (!currentRequestId) {
-      console.error("Fehler: Keine Request ID im Modal gespeichert.");
-      closeModal();
-      return;
-    }
-    // Hier den API-Aufruf ausführen
-    confirmAcceptRequest(currentRequestId, acceptingPlayerName);
-  };
-
-  // Schließen, wenn auf Schließen-Button oder außerhalb geklickt wird (optional)
-  if (modalCloseBtn) {
-    modalCloseBtn.onclick = closeModal;
-  }
-  window.onclick = function (event) {
-    if (event.target == acceptModal) {
-      closeModal();
-    }
-  };
-
-  // --- API Call Funktionen ---
-  async function fetchGames() {
-    /* ... (unverändert) ... */
-  }
-  async function addRequest() {
-    /* ... (unverändert) ... */
-  }
-  async function deleteRequest(id) {
-    /* ... (unverändert) ... */
-  }
-
-  // *** Frühere acceptRequest Funktion wird durch diese ersetzt/genutzt ***
-  async function confirmAcceptRequest(requestId, acceptingPlayerName) {
-    // Optional: Prüfen, ob der Name dem Anfragenden entspricht (obwohl das Backend das auch tun sollte)
-    // const requestPlayerName = ... (müsste man sich merken oder neu laden)
-    // if (acceptingPlayerName.toLowerCase() === requestPlayerName.toLowerCase()) {
-    //     alert("Du kannst dein eigenes Gesuch nicht annehmen.");
-    //     return;
-    // }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requestId: requestId,
-          acceptingPlayerName: acceptingPlayerName,
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || `HTTP error! status: ${response.status}`
-        );
-      }
-      await response.json();
-      closeModal(); // Modal schließen bei Erfolg
-      fetchGames(); // Liste neu laden
-    } catch (error) {
-      console.error("Fehler beim Annehmen des Gesuchs:", error);
-      alert(`Fehler beim Annehmen: ${error.message}`);
-      // Modal bleibt offen, damit der Nutzer es erneut versuchen oder abbrechen kann
-    }
-  }
-
-  async function deleteConfirmedGame(id) {
-    /* ... (unverändert) ... */
-  }
-
-  // --- Event Listeners (unverändert) ---
-  prevWeekBtn.addEventListener("click", () => {
-    /* ... */
-  });
-  nextWeekBtn.addEventListener("click", () => {
-    /* ... */
-  });
-  addRequestBtn.addEventListener("click", addRequest);
-
-  // --- Initial Load (unverändert) ---
-  updateWeekDisplay();
-  fetchGames();
+  updateWeekDisplay(); // Sofort das Datum anzeigen
+  fetchGames(); // Initiales Laden der Spieldaten für die aktuelle Woche
 });

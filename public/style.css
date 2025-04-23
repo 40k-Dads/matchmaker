@@ -1,8 +1,9 @@
+/* Grundlegendes Styling und Layout */
 body {
   font-family: sans-serif;
   background-color: #f4f7f6;
   margin: 0;
-  padding: 20px;
+  padding: 10px; /* Weniger Padding auf kleinen Screens */
   display: flex;
   justify-content: center;
   align-items: flex-start; /* Oben ausrichten */
@@ -11,19 +12,22 @@ body {
 
 .container {
   background-color: #ffffff;
-  padding: 30px;
+  padding: 20px; /* Weniger Padding im Container */
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 800px;
+  max-width: 800px; /* Maximale Breite für Desktop */
+  box-sizing: border-box; /* Padding einrechnen */
 }
 
 h1 {
   text-align: center;
   color: #333;
   margin-bottom: 30px;
+  font-size: 1.8em; /* Etwas größere Überschrift */
 }
 
+/* Wochen-Navigation */
 .navigation {
   display: flex;
   justify-content: space-between;
@@ -31,9 +35,13 @@ h1 {
   margin-bottom: 30px;
   padding-bottom: 20px;
   border-bottom: 1px solid #eee;
+  flex-wrap: wrap; /* Erlaubt Umbruch bei Bedarf */
+  gap: 10px; /* Abstand zwischen Elementen */
 }
 
-.current-week {
+.navigation .current-week {
+  flex-basis: 100%; /* Nimmt volle Breite wenn umgebrochen */
+  order: 2; /* Kommt nach den Buttons im DOM, aber visuell dazwischen */
   text-align: center;
 }
 
@@ -51,19 +59,25 @@ h1 {
 }
 
 .navigation button {
+  flex-grow: 1; /* Buttons teilen sich verfügbaren Platz */
+  order: 1; /* Standardreihenfolge */
+  padding: 10px 15px;
   background-color: #e7f0ff;
   color: #367bec;
   border: 1px solid #c5d9f9;
-  padding: 8px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.2s;
 }
-
 .navigation button:hover {
   background-color: #d1e0ff;
 }
 
+#prev-week {
+  order: 0;
+} /* Vorherige Woche zuerst */
+#next-week {
+  order: 3;
+} /* Nächste Woche zuletzt */
+
+/* Sektionen (Spielgesuche, Bestätigte Spiele) */
 .section {
   background-color: #fdfdfd;
   border: 1px solid #eee;
@@ -81,6 +95,7 @@ h1 {
   padding-bottom: 10px;
 }
 
+/* Listen Styling */
 ul {
   list-style: none;
   padding: 0;
@@ -96,6 +111,8 @@ li {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap; /* Erlaubt Umbruch in List Items */
+  gap: 5px; /* Kleiner Abstand, wenn umgebrochen */
 }
 
 li.loading-placeholder {
@@ -104,23 +121,52 @@ li.loading-placeholder {
   background-color: transparent;
   border: none;
   padding: 5px 0;
+  justify-content: flex-start;
+}
+li.loading-placeholder.error {
+  /* Fehler Styling */
+  color: #dc3545;
+  font-style: normal;
+  font-weight: bold;
 }
 
 li span {
   /* Für den Namen/Paarung */
   flex-grow: 1;
   margin-right: 10px;
+  flex-basis: 100%; /* Name/Paarung nimmt volle Breite auf kleinen Screens */
+  margin-right: 0;
+  margin-bottom: 5px; /* Etwas Abstand zu den Buttons, wenn umgebrochen */
+}
+
+li .actions {
+  flex-shrink: 0; /* Verhindert Schrumpfen der Buttons */
+  display: flex;
+  gap: 5px;
+  flex-basis: 100%; /* Buttons nehmen volle Breite auf kleinen Screens */
+  text-align: right; /* Buttons bleiben rechtsbündig */
+  justify-content: flex-end; /* Stellt sicher, dass sie rechts anfangen */
 }
 
 li .actions button {
-  margin-left: 5px;
   padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
   font-size: 0.9em;
+  white-space: nowrap; /* Verhindert Umbruch im Buttontext */
 }
 
+/* Button Basis-Styling */
+button {
+  cursor: pointer;
+  padding: 8px 15px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  font-size: 0.95em;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* Spezifische Button-Typen */
 .accept-btn {
+  /* In der Liste */
   background-color: #28a745; /* Grün */
   color: white;
   border: none;
@@ -130,31 +176,89 @@ li .actions button {
 }
 
 .delete-btn {
+  /* In der Liste */
   background-color: #ffcccc; /* Helleres Rot */
   color: #dc3545; /* Dunkleres Rot für Text */
   border: 1px solid #ffb3b3;
 }
-
 .delete-btn:hover {
   background-color: #ffb3b3;
   color: #c82333;
 }
 
-#add-request-btn {
+/* Button zum Anzeigen des Hinzufügen-Formulars */
+.button-add-request {
   background-color: #007bff;
   color: white;
   border: none;
   padding: 10px 15px;
   border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin-top: 10px;
+  margin-top: 15px; /* Abstand zur Liste */
+  display: inline-block; /* Damit Margin wirkt */
 }
-
-#add-request-btn:hover {
+.button-add-request:hover {
   background-color: #0056b3;
 }
-/* Modal Styling */
+
+/* Haupt-Aktionsbutton (z.B. in Formularen) */
+.button-primary {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+.button-primary:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+.button-primary:disabled {
+  /* Style für deaktivierten Button */
+  background-color: #a0cfff;
+  border-color: #a0cfff;
+  cursor: not-allowed;
+}
+
+/* Sekundär-Aktionsbutton / Abbrechen */
+.button-secondary {
+  background-color: #f0f0f0;
+  color: #555;
+  border: 1px solid #ccc;
+}
+.button-secondary:hover {
+  background-color: #e0e0e0;
+  border-color: #bbb;
+}
+
+/* Styling für das Inline Add-Formular */
+.add-form {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 5px;
+}
+
+.add-form input[type="text"] {
+  width: 100%; /* Nimmt volle Breite */
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
+  box-sizing: border-box; /* Padding/Border in Breite einrechnen */
+}
+
+.add-form .form-actions {
+  display: flex;
+  gap: 10px; /* Abstand zwischen Buttons */
+  flex-wrap: wrap; /* Buttons können umbrechen */
+}
+
+.add-form .form-actions button {
+  flex-grow: 1; /* Buttons teilen sich Platz */
+  padding: 10px 15px; /* Etwas größere Buttons im Formular */
+}
+
+/* Modal Styling ("Annehmen"-Dialog) */
 .modal {
   display: none; /* Wird durch JS auf 'block' geändert */
   position: fixed; /* Bleibt an Ort und Stelle */
@@ -174,10 +278,11 @@ li .actions button {
   padding: 30px;
   border: 1px solid #ddd;
   border-radius: 8px;
-  width: 80%; /* Breite des Modals */
-  max-width: 500px; /* Maximale Breite */
+  width: 90%; /* Breiter auf Mobile */
+  max-width: 500px; /* Maximale Breite auf Desktop */
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
   position: relative; /* Für den Schließen-Button */
+  box-sizing: border-box;
 }
 
 .close-btn {
@@ -188,6 +293,7 @@ li .actions button {
   font-size: 28px;
   font-weight: bold;
   cursor: pointer;
+  line-height: 1; /* Verhindert zu großen vertikalen Platz */
 }
 
 .close-btn:hover,
@@ -201,11 +307,13 @@ li .actions button {
   margin-bottom: 15px;
   color: #333;
   text-align: center;
+  font-size: 1.4em;
 }
 
 .modal p {
   margin-bottom: 20px;
   color: #555;
+  text-align: center;
 }
 
 .modal label {
@@ -213,43 +321,51 @@ li .actions button {
   margin-bottom: 5px;
   font-weight: bold;
   color: #444;
+  text-align: left;
 }
 
 .modal input[type="text"] {
-  width: calc(100% - 22px); /* Breite anpassen wg. Padding/Border */
+  width: 100%;
   padding: 10px;
   margin-bottom: 20px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1em;
+  box-sizing: border-box;
 }
 
 .modal-actions {
-  text-align: right; /* Buttons rechtsbündig */
+  display: flex; /* Flexbox für Buttons */
+  justify-content: flex-end; /* Buttons rechtsbündig */
+  gap: 10px; /* Abstand zwischen Buttons */
+  flex-wrap: wrap; /* Umbruch auf kleinen Screens */
   margin-top: 20px;
 }
 
 .modal-actions button {
   padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
   font-size: 1em;
-  margin-left: 10px;
-  border: none;
+  flex-grow: 1; /* Buttons teilen sich Platz auf Mobile */
+  min-width: 100px; /* Mindestbreite */
 }
 
+/* Spezifische Modal-Buttons */
 .modal-actions .cancel-btn {
   background-color: #f0f0f0;
   color: #555;
   border: 1px solid #ccc;
+  order: 1; /* Abbrechen zuerst (visuell links) */
 }
 .modal-actions .cancel-btn:hover {
   background-color: #e0e0e0;
 }
 
 .modal-actions .confirm-btn {
+  /* "Annehmen"-Button im Modal */
   background-color: #28a745; /* Grün */
   color: white;
+  border: none;
+  order: 2; /* Annehmen zuletzt (visuell rechts) */
 }
 .modal-actions .confirm-btn:hover {
   background-color: #218838;
@@ -258,4 +374,94 @@ li .actions button {
 /* Hilfsklasse zum Anzeigen des Modals */
 .modal.show {
   display: block;
+}
+
+/* Versteckt Elemente visuell, aber hält sie für Screenreader zugänglich */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Styling für Fehlermeldungen */
+.error-message {
+  color: #dc3545; /* Rot */
+  font-size: 0.9em;
+  margin-top: 10px;
+}
+
+/* Hilfsklasse zum Verstecken */
+.hidden {
+  display: none !important; /* Wichtig, um andere Display-Regeln zu überschreiben */
+}
+
+/* Media Query für Anpassungen auf kleinen Screens */
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.5em; /* Kleinere Hauptüberschrift */
+  }
+  .section h2 {
+    font-size: 1.2em; /* Kleinere Sektionsüberschriften */
+  }
+
+  .modal-content {
+    width: 95%; /* Noch etwas breiter auf sehr kleinen Screens */
+    padding: 20px;
+  }
+  .modal h2 {
+    font-size: 1.3em;
+  }
+  .modal-actions {
+    justify-content: center; /* Buttons zentrieren, wenn sie umbrechen */
+  }
+  .modal-actions button {
+    flex-basis: 100%; /* Buttons immer untereinander */
+    margin-bottom: 5px; /* Kleiner Abstand wenn untereinander */
+    order: 0 !important; /* Reihenfolge zurücksetzen, untereinander */
+  }
+  .modal-actions .confirm-btn {
+    order: 0 !important; /* Beide auf 0, DOM-Reihenfolge entscheidet */
+  }
+  .modal-actions .cancel-btn {
+    order: 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .navigation {
+    flex-direction: column; /* Wochennavigation untereinander */
+    align-items: stretch; /* Buttons dehnen sich */
+  }
+  .navigation .current-week {
+    order: 0; /* Woche zuerst */
+    margin-bottom: 10px; /* Abstand nach unten */
+  }
+  #prev-week {
+    order: 1;
+  }
+  #next-week {
+    order: 2;
+  }
+
+  li .actions {
+    justify-content: center; /* Buttons zentrieren */
+    flex-basis: auto; /* Buttons nehmen nur benötigten Platz */
+  }
+  li .actions button {
+    flex-grow: 1; /* Teilen sich den Platz */
+  }
+
+  .add-form .form-actions button {
+    flex-basis: 100%; /* Buttons untereinander */
+    margin-bottom: 5px; /* Kleiner Abstand wenn untereinander */
+  }
+  .add-form .form-actions button:last-child {
+    margin-bottom: 0;
+  }
 }

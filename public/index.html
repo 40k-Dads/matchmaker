@@ -24,10 +24,19 @@
       <div class="section">
         <h2>Spielgesuche für diese Woche</h2>
         <ul id="requests-list">
-          <li class="loading-placeholder">Lade Gesuche...</li>
+            <li class="loading-placeholder">Lade Gesuche...</li>
         </ul>
-        <button id="add-request-btn">Ich suche ein Spiel</button>
-      </div>
+
+        <div id="add-request-form" class="add-form" hidden>
+             <label for="new-request-name" class="sr-only">Dein Name</label> <input type="text" id="new-request-name" placeholder="Dein Name">
+             <div class="form-actions">
+                <button type="button" id="submit-request-btn" class="button-primary">Gesuch erstellen</button>
+                <button type="button" id="cancel-request-btn" class="button-secondary">Abbrechen</button>
+             </div>
+             <div id="add-request-error" class="error-message" hidden></div> </div>
+
+        <button id="add-request-btn" class="button-add-request">Ich suche ein Spiel</button>
+    </div>
 
       <div class="section">
         <h2>Bestätigte Spiele</h2>

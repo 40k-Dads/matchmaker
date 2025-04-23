@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gaming Club Matchmaking</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Gaming Club Matchmaking</h1>
+
+      <div class="navigation">
+        <button id="prev-week">← Vorherige Woche</button>
+        <div class="current-week">
+          <span id="week-display">Wird geladen...</span>
+          <span class="spieltag-info"
+            >Spieltag: Dienstag, 18:00 - 23:00 Uhr</span
+          >
+        </div>
+        <button id="next-week">Nächste Woche →</button>
+      </div>
+
+      <div class="section">
+        <h2>Spielgesuche für diese Woche</h2>
+        <ul id="requests-list">
+          <li class="loading-placeholder">Lade Gesuche...</li>
+        </ul>
+        <button id="add-request-btn">Ich suche ein Spiel</button>
+      </div>
+
+      <div class="section">
+        <h2>Bestätigte Spiele</h2>
+        <ul id="confirmed-list">
+          <li class="loading-placeholder">Lade bestätigte Spiele...</li>
+        </ul>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

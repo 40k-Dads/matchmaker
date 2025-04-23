@@ -36,6 +36,20 @@
         </ul>
       </div>
     </div>
+  </div> <div id="accept-modal" class="modal" hidden>
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h2>Spielgesuch annehmen</h2>
+        <p id="modal-question">Möchtest du das Spielgesuch von [Name] annehmen?</p>
+        <label for="accepting-player-name">Dein Name:</label>
+        <input type="text" id="accepting-player-name" placeholder="Gib deinen Namen ein">
+        <div class="modal-actions">
+            <button type="button" class="cancel-btn" onclick="closeModal()">Abbrechen</button>
+            <button type="button" id="modal-confirm-btn" class="confirm-btn">Annehmen</button>
+        </div>
+    </div>
+</div>
+
 
     <script src="script.js"></script>
   </body>

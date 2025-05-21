@@ -465,3 +465,59 @@ button {
     margin-bottom: 0;
   }
 }
+/* Am Ende der Datei oder an passender Stelle einfügen */
+
+/* Styling für die neue Formulargruppe (Label + Select) */
+.add-form .form-group {
+  margin-bottom: 10px;
+}
+
+.add-form .form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #444;
+  font-size: 0.9em;
+}
+
+.add-form .form-group select,
+.filter-controls select {
+  /* Styling auch für Filter-Selects */
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
+  box-sizing: border-box;
+  background-color: white; /* Sicherstellen, dass Hintergrund weiß ist */
+}
+
+/* Styling für die Filter-Controls */
+.filter-controls {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap; /* Für Responsivität */
+}
+
+.filter-controls label {
+  font-weight: bold;
+  color: #444;
+  font-size: 0.9em;
+  margin-bottom: 0; /* Entferne Standard-Margin von Label im Modal */
+}
+
+.filter-controls select {
+  flex-grow: 1; /* Select nimmt verfügbaren Platz */
+  min-width: 150px; /* Mindestbreite für das Select */
+}
+
+/* Sicherstellen, dass die Buttons im add-form immer noch gut aussehen */
+.add-form .form-actions {
+  margin-top: 10px; /* Etwas mehr Abstand nach oben, falls ein form-group darüber ist */
+}

@@ -5,6 +5,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const weekDisplay = document.getElementById("week-display");
   const requestsList = document.getElementById("requests-list");
   const confirmedList = document.getElementById("confirmed-list");
+  const newRequestSystemSelect = document.getElementById("new-request-system"); // NEU
+  const filterSystemRequestsSelect = document.getElementById(
+    "filter-system-requests"
+  ); // NEU
+  const filterSystemConfirmedSelect = document.getElementById(
+    "filter-system-confirmed"
+  ); // NEU
 
   // Referenzen für das Inline-Formular zum Hinzufügen
   const addRequestBtn = document.getElementById("add-request-btn");
@@ -30,6 +37,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Globaler State
   let currentTuesdayDate = getNextTuesday(new Date()); // Startet mit dem nächsten Dienstag
   let currentRequestId = null; // Speichert die ID für das "Annehmen"-Modal
+  let currentRequestsData = []; // Speichert die Rohdaten für Requests
+  let currentConfirmedData = []; // Speichert die Rohdaten für bestätigte Spiele
 
   // --- Datumsfunktionen ---
   function getNextTuesday(fromDate) {
@@ -72,30 +81,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderList(listElement, items, type) {
     listElement.innerHTML = ""; // Liste leeren
-    if (!items || items.length === 0) {
+
+    // Filtern basierend auf der aktuellen Auswahl
+    let currentFilterValue = "all";
+    if (listElement.id === "requests-list" && filterSystemRequestsSelect) {
+      currentFilterValue = filterSystemRequestsSelect.value;
+    } else if (
+      listElement.id === "confirmed-list" &&
+      filterSystemConfirmedSelect
+    ) {
+      currentFilterValue = filterSystemConfirmedSelect.value;
+    }
+
+    const filteredItems = items.filter((item) => {
+      if (currentFilterValue === "all") return true;
+      const nameToCheck =
+        type === "requests" ? item.player_name : item.player1_name; // Bei bestätigten Spielen ist P1 der Initiator
+      if (!nameToCheck) return false;
+
+      if (currentFilterValue === "AoS") return nameToCheck.includes("[AoS]");
+      if (currentFilterValue === "40k") return nameToCheck.includes("[40k]");
+      if (currentFilterValue === "none")
+        return !nameToCheck.includes("[AoS]") && !nameToCheck.includes("[40k]");
+      return true;
+    });
+
+    if (filteredItems.length === 0) {
       const li = document.createElement("li");
-      li.textContent =
-        type === "requests"
-          ? "Keine offenen Spielgesuche für diese Woche."
-          : "Keine bestätigten Spiele für diese Woche.";
+      if (items.length > 0 && filteredItems.length === 0) {
+        // Es gibt Daten, aber Filter zeigt nichts
+        li.textContent = `Keine Einträge für den gewählten Filter "${currentFilterValue.toUpperCase()}".`;
+      } else {
+        // Generische Nachricht
+        li.textContent =
+          type === "requests"
+            ? "Keine offenen Spielgesuche für diese Woche."
+            : "Keine bestätigten Spiele für diese Woche.";
+      }
       li.classList.add("loading-placeholder");
       listElement.appendChild(li);
       return;
     }
 
-    items.forEach((item) => {
+    filteredItems.forEach((item) => {
+      // ... (Rest der renderList Logik zum Erstellen der <li> Elemente bleibt gleich)
       const li = document.createElement("li");
       const textSpan = document.createElement("span");
       const actionsDiv = document.createElement("div");
       actionsDiv.classList.add("actions");
 
       if (type === "requests") {
-        textSpan.textContent = `${item.player_name} sucht ein Spiel`;
+        textSpan.textContent = `${item.player_name} sucht ein Spiel`; // Name mit Suffix wird angezeigt
 
         const acceptBtn = document.createElement("button");
         acceptBtn.textContent = "Annehmen";
         acceptBtn.classList.add("accept-btn");
-        acceptBtn.onclick = () => openAcceptModal(item.id, item.player_name);
+        acceptBtn.onclick = () => openAcceptModal(item.id, item.player_name); // player_name enthält Suffix
 
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Löschen";
@@ -106,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
         actionsDiv.appendChild(deleteBtn);
       } else {
         // confirmed
-        textSpan.textContent = `${item.player1_name} vs ${item.player2_name}`;
+        textSpan.textContent = `${item.player1_name} vs ${item.player2_name}`; // player1_name enthält Suffix
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Löschen";
         deleteBtn.classList.add("delete-btn");
@@ -189,9 +230,12 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(errorMsg);
       }
       const data = await response.json();
-      // Daten rendern (setLoadingState(false) ist implizit durch renderList)
-      renderList(requestsList, data.requests || [], "requests");
-      renderList(confirmedList, data.confirmed || [], "confirmed");
+      currentRequestsData = data.requests || []; // Rohdaten speichern
+      currentConfirmedData = data.confirmed || []; // Rohdaten speichern
+
+      // Listen mit den neuen Rohdaten und aktuellen Filtern rendern
+      renderList(requestsList, currentRequestsData, "requests");
+      renderList(confirmedList, currentConfirmedData, "confirmed");
     } catch (error) {
       console.error("Fehler beim Abrufen der Spiele:", error);
       showLoadingError(requestsList, "requests");
@@ -200,16 +244,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function submitNewRequest() {
-    const playerName = newRequestNameInput.value.trim();
+    let playerName = newRequestNameInput.value.trim();
+    const system = newRequestSystemSelect.value; // NEU: System auslesen
+
     if (!playerName) {
       showAddRequestError("Name darf nicht leer sein.");
       newRequestNameInput.focus();
       return;
     }
-    hideAddRequestError(); // Fehler ausblenden, falls vorher einer da war
+    hideAddRequestError();
+
+    // Namen mit System-Suffix versehen
+    if (system === "AoS") {
+      playerName += " [AoS]";
+    } else if (system === "40k") {
+      playerName += " [40k]";
+    }
+    // Wenn system === "" (Egal), wird nichts angehängt
 
     const dateStr = formatDate(currentTuesdayDate);
-    submitRequestBtn.disabled = true; // Button deaktivieren während Senden
+    submitRequestBtn.disabled = true;
     submitRequestBtn.textContent = "Sende...";
 
     try {
@@ -224,15 +278,12 @@ document.addEventListener("DOMContentLoaded", () => {
           errorData?.error || `HTTP error! Status: ${response.status}`;
         throw new Error(errorMessage);
       }
-      await response.json(); // Antwort verarbeiten (hier nicht genutzt)
-
-      // Erfolgreich: Formular zurücksetzen und Liste neu laden
+      await response.json();
       hideAddRequestForm();
-      fetchGames(); // Liste neu laden, um das neue Gesuch anzuzeigen
+      fetchGames(); // Lädt neu und wendet Filter an
     } catch (error) {
       console.error("Fehler beim Hinzufügen des Gesuchs:", error);
       showAddRequestError(`Fehler: ${error.message}`);
-      // Button wieder aktivieren, damit Nutzer es erneut versuchen kann
       submitRequestBtn.disabled = false;
       submitRequestBtn.textContent = "Gesuch erstellen";
     }
@@ -340,6 +391,7 @@ document.addEventListener("DOMContentLoaded", () => {
     addRequestForm.hidden = false; // Formular anzeigen
     newRequestNameInput.value = ""; // Input leeren
     hideAddRequestError(); // Alte Fehler löschen
+    newRequestSystemSelect.value = "";
     newRequestNameInput.focus(); // Fokus auf Input
     submitRequestBtn.disabled = false; // Button aktivieren (falls vorher deaktiviert)
     submitRequestBtn.textContent = "Gesuch erstellen"; // Button Text zurücksetzen
@@ -423,6 +475,17 @@ document.addEventListener("DOMContentLoaded", () => {
       closeModal();
     }
   });
+  // NEU: Event Listener für Filter
+  if (filterSystemRequestsSelect) {
+    filterSystemRequestsSelect.addEventListener("change", () => {
+      renderList(requestsList, currentRequestsData, "requests"); // Liste mit aktuellen Daten und neuem Filter neu rendern
+    });
+  }
+  if (filterSystemConfirmedSelect) {
+    filterSystemConfirmedSelect.addEventListener("change", () => {
+      renderList(confirmedList, currentConfirmedData, "confirmed");
+    });
+  }
 
   // --- Initial Load ---
   updateWeekDisplay(); // Sofort das Datum anzeigen

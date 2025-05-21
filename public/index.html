@@ -24,39 +24,16 @@
           <li class="loading-placeholder">Lade Gesuche...</li>
         </ul>
 
-        <div id="add-request-form" class="add-form">
-          <label for="new-request-name" class="sr-only">Dein Name</label>
-          <input type="text" id="new-request-name" placeholder="Dein Name" />
-          <div class="form-group">
-            <label for="new-request-system">Spielsystem:</label>
-            <select id="new-request-system">
-              <option value="">Egal</option>
-              <option value="AoS">Age of Sigmar (AoS)</option>
-              <option value="40k">Warhammer 40k</option>
-            </select>
-          </div>
+        <div id="add-request-form" class="add-form" hidden>
+          <label for="new-request-name" class="sr-only">Dein Name</label> <input type="text" id="new-request-name" placeholder="Dein Name">
           <div class="form-actions">
-            <button
-              type="button"
-              id="submit-request-btn"
-              class="button-primary"
-            >
-              Gesuch erstellen
-            </button>
-            <button
-              type="button"
-              id="cancel-request-btn"
-              class="button-secondary"
-            >
-              Abbrechen
-            </button>
+             <button type="button" id="submit-request-btn" class="button-primary">Gesuch erstellen</button>
+             <button type="button" id="cancel-request-btn" class="button-secondary">Abbrechen</button>
           </div>
-          <div id="add-request-error" class="error-message" hidden></div>
+          <div id="add-request-error" class="error-message" hidden></div> </div>
 
-          <button id="add-request-btn" class="button-add-request">
-            Ich suche ein Spiel
-          </button>
-        </div>
+     <button id="add-request-btn" class="button-add-request">Ich suche ein Spiel</button>
+ </div>
         <div class="filter-controls">
           <label for="filter-system-requests">Filter Gesuche:</label>
           <select id="filter-system-requests">

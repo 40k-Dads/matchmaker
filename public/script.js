@@ -35,17 +35,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const API_BASE_URL = window.location.origin;
 
   // Globaler State
-  let currentTuesdayDate = getNextTuesday(new Date()); // Startet mit dem nächsten Dienstag
+  let currentFridayDate = getNextFriday(new Date()); // Startet mit dem nächsten Freitag
   let currentRequestId = null; // Speichert die ID für das "Annehmen"-Modal
   let currentRequestsData = []; // Speichert die Rohdaten für Requests
   let currentConfirmedData = []; // Speichert die Rohdaten für bestätigte Spiele
 
   // --- Datumsfunktionen ---
-  function getNextTuesday(fromDate) {
+  function getNextFriday(fromDate) {
     const date = new Date(fromDate);
     date.setHours(12, 0, 0, 0); // Mittagszeit verwenden, um Zeitzonenprobleme zu minimieren
     const day = date.getDay(); // 0 = Sonntag, 1 = Montag, 2 = Dienstag, ...
-    const diff = (2 - day + 7) % 7; // Tage bis zum nächsten Dienstag
+    const diff = (5 - day + 7) % 7; // Tage bis zum nächsten Freitag
     date.setDate(date.getDate() + diff);
     return date;
   }
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function formatDateForDisplay(date) {
-    // Format: Dienstag, DD.MM.YYYY
+    // Format: Freitag, DD.MM.YYYY
     const options = {
       weekday: "long",
       year: "numeric",
@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- UI Update Funktionen ---
   function updateWeekDisplay() {
-    weekDisplay.textContent = `${formatDateForDisplay(currentTuesdayDate)}`;
+    weekDisplay.textContent = `${formatDateForDisplay(currentFridayDate)}`;
     // Optional: Buttons deaktivieren, wenn man zu weit in die Zukunft/Vergangenheit geht
     // (Hier nicht implementiert, aber möglich)
   }
@@ -101,8 +101,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (currentFilterValue === "AoS") return nameToCheck.includes("[AoS]");
       if (currentFilterValue === "40k") return nameToCheck.includes("[40k]");
+      if (currentFilterValue === "40k-CP") return nameToCheck.includes("[40k-CP]");
+      if (currentFilterValue === "40k-KT") return nameToCheck.includes("[40k-KT]");
       if (currentFilterValue === "none")
-        return !nameToCheck.includes("[AoS]") && !nameToCheck.includes("[40k]");
+        return !nameToCheck.includes("[AoS]") && !nameToCheck.includes("[40k]") && !nameToCheck.includes("[40k-CP]") && !nameToCheck.includes("[40k-KT]");
       return true;
     });
 
@@ -214,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- API Call Funktionen ---
   async function fetchGames() {
     setLoadingState(true);
-    const dateStr = formatDate(currentTuesdayDate);
+    const dateStr = formatDate(currentFridayDate);
     try {
       // Nur die Daten für das ausgewählte Datum abrufen
       const response = await fetch(`${API_BASE_URL}/api/games?date=${dateStr}`);
@@ -259,10 +261,14 @@ document.addEventListener("DOMContentLoaded", () => {
       playerName += " [AoS]";
     } else if (system === "40k") {
       playerName += " [40k]";
+    } else if (system === "40k-CP") {
+      playerName += " [40k-CP]";
+    } else if (system === "40k-KT") {
+      playerName += " [40k-KT]";
     }
     // Wenn system === "" (Egal), wird nichts angehängt
 
-    const dateStr = formatDate(currentTuesdayDate);
+    const dateStr = formatDate(currentFridayDate);
     submitRequestBtn.disabled = true;
     submitRequestBtn.textContent = "Sende...";
 
@@ -417,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Event Listeners ---
   // Wochennavigation
   prevWeekBtn.addEventListener("click", () => {
-    currentTuesdayDate = addDays(currentTuesdayDate, -7);
+    currentFridayDate = addDays(currentFridayDate, -7);
     updateWeekDisplay();
     fetchGames();
     hideAddRequestForm(); // Formular verstecken beim Wochenwechsel
@@ -426,14 +432,14 @@ document.addEventListener("DOMContentLoaded", () => {
   nextWeekBtn.addEventListener("click", () => {
     // Optional: Begrenzung auf nächste Woche (Hier implementiert)
     const today = new Date();
-    const thisWeeksTuesday = getNextTuesday(today);
-    const nextWeeksTuesday = addDays(thisWeeksTuesday, 7);
+    const thisWeeksFriday = getNextFriday(today);
+    const nextWeeksFriday = addDays(thisWeeksFriday, 7);
 
     // Erlaube nur diese Woche und die nächste Woche
     if (
-      formatDate(addDays(currentTuesdayDate, 7)) <= formatDate(nextWeeksTuesday)
+      formatDate(addDays(currentFridayDate, 7)) <= formatDate(nextWeeksFriday)
     ) {
-      currentTuesdayDate = addDays(currentTuesdayDate, 7);
+      currentFridayDate = addDays(currentFridayDate, 7);
       updateWeekDisplay();
       fetchGames();
       hideAddRequestForm(); // Formular verstecken beim Wochenwechsel
